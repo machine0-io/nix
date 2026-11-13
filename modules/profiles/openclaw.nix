@@ -6,6 +6,7 @@
 # We do not pre-enable services.openclaw-gateway — onboarding is what wires
 # secrets/identity, and it should remain user-driven.
 {
+  config,
   pkgs,
   lib,
   inputs,
@@ -26,18 +27,18 @@ in
   # mkForce (50) overrides loaded.nix's normal priority (100).
   machine0.motd.text = lib.mkForce (
     import ../../lib/mkMotd.nix {
-      title = "[ m0 ] NixOS 25.11 · OpenClaw 🦞";
+      title = "[ m0 ] NixOS ${config.system.nixos.release} · OpenClaw 🦞";
       body = [
         "# Start onboarding (~60s on first run):"
         "$ openclaw onboard --install-daemon"
         ""
         "Built with the #openclaw profile, fork to customize:"
-        "-> https://github.com/fdmtl/machine0-nixos"
+        "-> https://github.com/machine0-io/nix"
       ];
     }
   );
 
   # Auto-upgrade tracks the openclaw profile, not the default (loaded).
   # Normal priority overrides core/nix.nix's mkDefault.
-  system.autoUpgrade.flake = "github:fdmtl/machine0-nixos#openclaw";
+  system.autoUpgrade.flake = "github:machine0-io/nix#openclaw";
 }

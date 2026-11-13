@@ -15,7 +15,7 @@ lib/
 modules/
   profiles/
     base.nix                      # Minimal: boot, networking, ssh, fail2ban, users, system, motd
-    loaded.nix                    # base + dev stack (packages, services, home-manager/zsh)
+    loaded.nix                    # base + dev stack (packages, services, clone-repos, home-manager/zsh)
     openclaw.nix                  # loaded + playwright-mcp + openclaw CLI
     hermes.nix                    # loaded + playwright-mcp + hermes CLI + nixosModule
     gpu.nix                       # base + hardware/nvidia.nix (GPU droplets only)
@@ -26,14 +26,20 @@ modules/
   development/
     packages.nix                  # Build tools, runtimes, AI agents (loaded+)
     services.nix                  # Rootless Docker, npm, nginx, firewall 80/443, sysctl (loaded+)
+    clone-repos.nix               # machine0-clone-repos oneshot: CLONE_REPOS_ON_INIT → ~/Projects (loaded+)
     playwright-mcp.nix            # Playwright browsers (openclaw/hermes only)
   home/
     default.nix                   # Home Manager setup
-    nix-user.nix                  # zsh, starship, zoxide, eza, fzf, screen, agent shims
+    nix-user.nix                  # zsh, starship, zoxide, eza, fzf, screen, agent shims, cl/clc claude launchers
   machine0.nix                    # Metadata service, hostname, SSH key install (systemd oneshots)
   motd.nix                        # machine0.motd.text option
   image.nix                       # qcow2 image builder (appended by mkimage.nix, not used at runtime)
 ```
+
+## Testing
+
+- Nix eval: `nix eval .#nixosConfigurations.<profile>.config.system.build.toplevel.drvPath --extra-experimental-features 'nix-command flakes'` for each of the 5 profiles. Full `nix flake check` exceeds 10 minutes — use the targeted evals instead. New files must be `git add`ed before flake eval sees them.
+- Contract checks: `nix eval .#checks.x86_64-linux.<name>.drvPath --extra-experimental-features 'nix-command flakes'` for each profile plus `manifest-sync` and `consumer-image`. Each one evaluates that profile through its exported module (MOTD overridden, auto-upgrade off) and asserts what it carries (clone-repos scope, `cl`/`clc` aliases, nightly auto-upgrade tracking this repo, manifest.json and flake profile names in sync). CI runs these on every PR; they add to the per-profile eval above, they do not replace it.
 
 ## Profile inheritance
 
@@ -44,7 +50,7 @@ base ─┬→ loaded ─┬→ openclaw
 ```
 
 - **base**: core/* modules, basic CLI packages (vim, git, curl, htop, wget, tmux, jq). Bash shell.
-- **loaded**: base + development/packages.nix + development/services.nix + home/. Zsh shell. Rootless Docker, npm, nginx, firewall 80/443.
+- **loaded**: base + development/packages.nix + development/services.nix + development/clone-repos.nix + home/. Zsh shell. Rootless Docker, npm, nginx, firewall 80/443. `machine0-clone-repos` oneshot — clones the repos listed in the machine0 profile's `CLONE_REPOS_ON_INIT` env var (comma-separated `owner/repo` slugs or git URLs, read from `~/.machine0/env.sh` after profile injection) into `~/Projects`. No variable → no-op. `cl`/`clc` zsh aliases launch claude with `CLAUDE_CODE_SANDBOXED=1` and `--dangerously-skip-permissions` (`clc` adds `--continue`).
 - **openclaw**: loaded + playwright-mcp + openclaw CLI from nix-openclaw flake input.
 - **hermes**: loaded + playwright-mcp + hermes CLI + nixosModule from hermes-agent flake input.
 - **gpu**: base + hardware/nvidia.nix — NVIDIA datacenter driver 570.172.08 (pinned), nvidia-persistenced, fabricmanager gated on NVSwitch presence, rootful Docker with `--gpus all` (CDI). Boots GPU droplets only (gpuOnly on the machine0 platform).
@@ -79,11 +85,11 @@ machine0 get <name> --json
   machine0 new <name> --image <image-slug> --size large
   ```
   Use `manifest.json` to map profile → image slug:
-  - base → `nixos-25-11`
-  - loaded → `nixos-25-11-loaded`
-  - openclaw → `nixos-25-11-openclaw`
-  - hermes → `nixos-25-11-hermes`
-  - gpu → `nixos-25-11-nvidia` (GPU droplets only — do not create test VMs on normal sizes)
+  - base → `nixos-26-05`
+  - loaded → `nixos-26-05-loaded`
+  - openclaw → `nixos-26-05-openclaw`
+  - hermes → `nixos-26-05-hermes`
+  - gpu → `nixos-26-05-nvidia` (GPU droplets only — do not create test VMs on normal sizes)
 
 **User doesn't name a VM** (e.g. "add nginx to the loaded profile"):
 - Create a temporary VM for test provisioning:

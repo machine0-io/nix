@@ -54,6 +54,10 @@ in
     datacenter.enable = true;
     package = config.boot.kernelPackages.nvidiaPackages.dc_570;
     nvidiaPersistenced = true;
+    # nixpkgs 26.05 dropped the default for `hardware.nvidia.open`, making it
+    # mandatory. Pin it to the pre-26.05 default (closed kernel modules) so the
+    # driver variant doesn't silently change across every GPU SKU.
+    open = false;
   };
 
   # The datacenter path only installs nvidia.ko (udev modalias autoload).

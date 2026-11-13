@@ -16,19 +16,19 @@
   # is derived from the actual pin in hardware/nvidia.nix so the banner
   # can't drift when the dc branch attr moves on a nixpkgs bump.
   machine0.motd.text = import ../../lib/mkMotd.nix {
-    title = "[ m0 ] NixOS 25.11 · GPU";
+    title = "[ m0 ] NixOS ${config.system.nixos.release} · GPU";
     body = [
       "# NVIDIA dc driver ${config.hardware.nvidia.package.version} · CUDA via containers (--gpus all)"
       "$ nvidia-smi"
       ""
       "Built with the #gpu profile, fork to customize:"
-      "-> https://github.com/fdmtl/machine0-nixos"
+      "-> https://github.com/machine0-io/nix"
     ];
   };
 
   # Auto-upgrade tracks the gpu profile, not the default. Normal priority
   # overrides core/nix.nix's mkDefault. (Same pattern as openclaw/hermes.)
-  system.autoUpgrade.flake = "github:fdmtl/machine0-nixos#gpu";
+  system.autoUpgrade.flake = "github:machine0-io/nix#gpu";
 
   # core/nix.nix tunes the nix daemon for 1 GB VMs (max-jobs = 1, cores =
   # 1). GPU droplets start at 8 vCPU / 64 GB — let provisions and nightly

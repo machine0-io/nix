@@ -5,6 +5,7 @@
 # pre-enable services.hermes-agent — the wizard is what wires API keys
 # and platform tokens, and it should remain user-driven.
 {
+  config,
   pkgs,
   lib,
   inputs,
@@ -26,7 +27,7 @@ in
   # mkForce (50) overrides loaded.nix's normal priority (100).
   machine0.motd.text = lib.mkForce (
     import ../../lib/mkMotd.nix {
-      title = "[ m0 ] NixOS 25.11 · Hermes Agent ☤";
+      title = "[ m0 ] NixOS ${config.system.nixos.release} · Hermes Agent ☤";
       body = [
         "# Quick start:"
         "$ hermes setup"
@@ -37,12 +38,12 @@ in
         "$ hermes gateway start"
         ""
         "Built with the #hermes profile, fork to customize:"
-        "-> https://github.com/fdmtl/machine0-nixos"
+        "-> https://github.com/machine0-io/nix"
       ];
     }
   );
 
   # Auto-upgrade tracks the hermes profile, not the default (loaded).
   # Normal priority overrides core/nix.nix's mkDefault.
-  system.autoUpgrade.flake = "github:fdmtl/machine0-nixos#hermes";
+  system.autoUpgrade.flake = "github:machine0-io/nix#hermes";
 }

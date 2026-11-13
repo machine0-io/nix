@@ -37,6 +37,8 @@
 
       mkdir -p "$HOME/Projects"
       failed=0
+      # Destination -> URL claimed in this run, to catch name collisions.
+      declare -A claimed=()
       IFS=',' read -ra repos <<< "$CLONE_REPOS_ON_INIT"
       for repo in "''${repos[@]}"; do
         # Trim surrounding whitespace; skip empty entries.
@@ -45,10 +47,25 @@
         [ -n "$repo" ] || continue
 
         case "$repo" in
-          *://*) url="$repo" ;;
+          # Full URLs and git's scp-like form (git@host:owner/repo.git).
+          *://* | *@*:*) url="$repo" ;;
           *) url="https://github.com/$repo.git" ;;
         esac
-        dest="$HOME/Projects/$(basename "$repo" .git)"
+        # Last path component; the scp-like form may have no slash at all
+        # (git@host:repo.git), so also drop everything up to the last colon.
+        name="$(basename "$repo" .git)"
+        dest="$HOME/Projects/''${name##*:}"
+
+        # Two different sources with the same final name would share one
+        # destination; without this the second is skipped as already cloned.
+        if [ -n "''${claimed[$dest]:-}" ]; then
+          if [ "''${claimed[$dest]}" != "$url" ]; then
+            echo "FAILED: $url and ''${claimed[$dest]} both map to $dest; not cloning $url"
+            failed=1
+          fi
+          continue
+        fi
+        claimed[$dest]="$url"
 
         if [ -e "$dest" ]; then
           echo "skipping $repo: $dest already exists"

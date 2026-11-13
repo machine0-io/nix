@@ -8,16 +8,16 @@ This repository contains the profiles that are used to build the [machine0](http
 curl -LsSf https://machine0.io/install.sh | sh
 
 # create a NixOS VM
-machine0 new nixos --image nixos-25-11-loaded --size medium
+machine0 new nixos --image nixos-26-05-loaded --size medium
 
 # clone the repo, customize and rebuild
-git clone https://github.com/fdmtl/machine0-nixos.git && cd machine0-nixos
+git clone https://github.com/machine0-io/nix.git && cd nix
 claude -p "make any change to the loaded profile you'd like"
 machine0 provision nixos ./flake.nix#loaded
 
 # or, rebuild from within the VM
 machine0 ssh nixos
-git clone https://github.com/fdmtl/machine0-nixos.git && cd machine0-nixos
+git clone https://github.com/machine0-io/nix.git && cd nix
 ./rebuild.sh
 ```
 > **Note:** We strongly recommend `--size medium` or larger. Nix builds are CPU and memory intensive — small instances work but take forever.
@@ -26,11 +26,11 @@ git clone https://github.com/fdmtl/machine0-nixos.git && cd machine0-nixos
 
 | Image Name | Profile | Description |
 |---|---|---|
-| `nixos-25-11` | `#base` | Minimal NixOS installation |
-| `nixos-25-11-loaded` | `#loaded` | Modern agents (Claude, Codex...) and dev tools (e.g. Docker, Node, Python...). |
-| `nixos-25-11-openclaw` | `#openclaw` | Loaded + [OpenClaw](https://github.com/openclaw/nix-openclaw). |
-| `nixos-25-11-hermes` | `#hermes` | Loaded + [Hermes Agent](https://github.com/NousResearch/hermes-agent). |
-| `nixos-25-11-nvidia` | `#gpu` | Base + NVIDIA datacenter driver (570.172.08), GPU containers (`docker --gpus all`). GPU droplets only. |
+| `nixos-26-05` | `#base` | Minimal NixOS installation |
+| `nixos-26-05-loaded` | `#loaded` | Modern agents (Claude, Codex...) and dev tools (e.g. Docker, Node, Python...). Clones the repos listed in the machine0 profile's `CLONE_REPOS_ON_INIT` (comma-separated `owner/repo` slugs or git URLs) into `~/Projects` at boot. |
+| `nixos-26-05-openclaw` | `#openclaw` | Loaded + [OpenClaw](https://github.com/openclaw/nix-openclaw). |
+| `nixos-26-05-hermes` | `#hermes` | Loaded + [Hermes Agent](https://github.com/NousResearch/hermes-agent). |
+| `nixos-26-05-nvidia` | `#gpu` | Base + NVIDIA datacenter driver (570.172.08), GPU containers (`docker --gpus all`). GPU droplets only. |
 
 The (profile → image) mapping is canonical in [`manifest.json`](manifest.json) and consumed by the build/test scripts.
 
@@ -51,7 +51,7 @@ You don't have to fork this repo to customize it. A separate (possibly private) 
 ```nix
 {
   description = "private machine0 profile";
-  inputs.machine0.url = "github:fdmtl/machine0-nixos";
+  inputs.machine0.url = "github:machine0-io/nix";
 
   outputs = { self, machine0, ... }:
     let

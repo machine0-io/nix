@@ -1,6 +1,6 @@
 # Development packages — build tools, language runtimes, CLI essentials,
 # AI agents. The unstable-nixpkgs overlay is wired in here so claude-code
-# and codex track upstream releases without waiting for the 25.11 channel.
+# and codex track upstream releases without waiting for the 26.05 channel.
 #
 # Note: zsh/starship/zoxide/eza/screen/fzf are *not* in this list —
 # Home Manager owns them per-user and places their configs in the right
@@ -36,10 +36,10 @@ let
   # but this derivation is the thing that breaks, so check it here too.
   machine0-cli = pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
     pname = "machine0-cli";
-    version = "1.0.164";
+    version = "1.0.180";
     src = pkgs.fetchurl {
       url = "https://registry.npmjs.org/@machine0/cli/-/cli-${finalAttrs.version}.tgz";
-      hash = "sha256-7BLWBUZcV7l4KTwf0RvIn2+z7P1w5Q4KWAwsiA1jHdw=";
+      hash = "sha256-zLB6zaXNM0EMlK0qUeUuCVZvFhRA3wfBcjEnm9GpluY=";
     };
     nativeBuildInputs = [ pkgs.makeWrapper ];
     dontBuild = true;

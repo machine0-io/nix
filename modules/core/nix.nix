@@ -41,11 +41,11 @@
   # not the daemon) doesn't get killed by the kernel OOM-killer.
   zramSwap.enable = true;
 
-  # Automatic security updates. Pinned-by-default to the upstream flake;
+  # Automatic security updates. Pinned-by-default to this repo's flake;
   # forks override via lib.mkForce.
   system.autoUpgrade = {
     enable = true;
-    flake = lib.mkDefault "github:fdmtl/machine0-nixos";
+    flake = lib.mkDefault "github:machine0-io/nix";
     flags = [
       "--refresh"
       "--no-write-lock-file"

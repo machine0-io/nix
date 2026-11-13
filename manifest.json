@@ -1,9 +1,9 @@
 {
   "profiles": [
-    { "profile": "base",     "image": "nixos-25-11" },
-    { "profile": "loaded",   "image": "nixos-25-11-loaded" },
-    { "profile": "openclaw", "image": "nixos-25-11-openclaw", "testSize": "medium" },
-    { "profile": "hermes",   "image": "nixos-25-11-hermes",   "testSize": "medium" },
-    { "profile": "gpu",      "image": "nixos-25-11-nvidia",   "skipDraftTest": true }
+    { "profile": "base",     "image": "nixos-26-05" },
+    { "profile": "loaded",   "image": "nixos-26-05-loaded" },
+    { "profile": "openclaw", "image": "nixos-26-05-openclaw", "testSize": "medium" },
+    { "profile": "hermes",   "image": "nixos-26-05-hermes",   "testSize": "medium" },
+    { "profile": "gpu",      "image": "nixos-26-05-nvidia",   "skipDraftTest": true }
   ]
 }

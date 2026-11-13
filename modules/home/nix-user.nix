@@ -9,7 +9,7 @@
 {
   home.username = "nix";
   home.homeDirectory = "/home/nix";
-  home.stateVersion = "25.11";
+  home.stateVersion = "26.05";
 
   # ── Shell ──────────────────────────────────────────────────────────────
   programs.zsh = {
@@ -50,6 +50,14 @@
 
       # MCP
       mcp-inspector = "npx @modelcontextprotocol/inspector";
+
+      # Claude: quick launchers for the common "just let it run" invocation.
+      # CLAUDE_CODE_SANDBOXED=1 skips the one-time-per-directory "do you trust
+      # this folder?" prompt (confirmed in the claude-code binary: the trust
+      # check short-circuits to true whenever this env var is set, for every
+      # directory, not just the one it's first accepted in).
+      cl = "CLAUDE_CODE_SANDBOXED=1 claude --dangerously-skip-permissions";
+      clc = "CLAUDE_CODE_SANDBOXED=1 claude --dangerously-skip-permissions --continue";
     };
 
     initContent = ''
@@ -74,8 +82,13 @@
       gc() { git commit -a -m "$1"; }
       spc() { for _ in {1..30}; do echo; done; }
 
-      # Use ls completion for the `l` alias.
-      compdef l=ls 2>/dev/null
+      # `l` is an alias for eza, which ships its own `_eza` completion
+      # function; zsh resolves alias completion to the aliased command's
+      # completer, so `l` was getting eza's (fuzzy-ish) completion instead of
+      # plain filename completion. Bind straight to `_files` — the same
+      # plain, prefix-only completer `ls` uses — rather than `compdef l=ls`,
+      # which didn't override eza's own completion for the alias.
+      compdef _files l
     '';
   };
 

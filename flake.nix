@@ -2,15 +2,15 @@
   description = "machine0 NixOS images — base, loaded, openclaw, hermes, gpu";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     home-manager = {
-      url = "github:nix-community/home-manager/release-25.11";
+      url = "github:nix-community/home-manager/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     # Agent profiles. Both pin nixos-unstable upstream; we deliberately do
-    # NOT make them follow our 25.11 nixpkgs to avoid eval breakage.
+    # NOT make them follow our 26.05 nixpkgs to avoid eval breakage.
     nix-openclaw.url = "github:openclaw/nix-openclaw";
     hermes-agent.url = "github:NousResearch/hermes-agent";
   };
@@ -22,7 +22,7 @@
 
       mkSystem = import ./lib/mksystem.nix {
         inherit nixpkgs inputs system;
-        stateVersion = "25.11";
+        stateVersion = "26.05";
       };
 
       mkImage = import ./lib/mkimage.nix { inherit mkSystem; };
@@ -85,10 +85,55 @@
             pkgs.runCommand "consumer-api-${name}" { } ''
               echo "${builtins.unsafeDiscardStringContext drv.drvPath}" > "$out"
             '';
+
+          expect =
+            name: cond: msg:
+            if cond then true else throw "checks.${system}.${name}: ${msg}";
+
+          # Per-profile contract assertions, forced before the guard's
+          # derivation so they ride on the system eval the guard already does.
+          #
+          # Value: protects=machine0-clone-repos unit exists on loaded,
+          #   openclaw, hermes and is absent on base and gpu;
+          #   fails_when=clone-repos.nix import is dropped from loaded.nix or
+          #   added to base.nix; why_new=eval guards only prove the system
+          #   evaluates, not which units it carries; seam=none;
+          #   no_claim=the unit's clone script behaviour at boot (eval only,
+          #   nothing is built or run)
+          # Value: protects=cl and clc zsh aliases exist for the nix user on
+          #   every loaded-derived profile and set CLAUDE_CODE_SANDBOXED=1;
+          #   fails_when=the aliases are removed from home/nix-user.nix or
+          #   moved back to a dev-only module; why_new=no check reads Home
+          #   Manager shell aliases; seam=none; no_claim=that claude accepts
+          #   these flags or that the alias works in a live shell (eval only)
+          profileContracts =
+            name: cfg:
+            let
+              # Set by loaded.nix, so true exactly on loaded-derived profiles.
+              isLoadedPlus = cfg.machine0.profile.loaded;
+              aliases = cfg.home-manager.users.nix.programs.zsh.shellAliases;
+              launcher = alias: nixpkgs.lib.hasInfix "CLAUDE_CODE_SANDBOXED=1 claude" (aliases.${alias} or "");
+            in
+            [
+              (expect name (
+                (cfg.systemd.services ? machine0-clone-repos) == isLoadedPlus
+              ) "machine0-clone-repos must be present on loaded-derived profiles and absent elsewhere")
+              (expect name (
+                !isLoadedPlus || (launcher "cl" && launcher "clc" && nixpkgs.lib.hasSuffix "--continue" aliases.clc)
+              ) "cl/clc claude launcher aliases must exist on loaded-derived profiles")
+              (expect name (nixpkgs.lib.hasPrefix "github:machine0-io/nix" cfg.system.autoUpgrade.flake)
+                "nightly auto-upgrade must track this repo on every profile"
+              )
+            ];
         in
         builtins.mapAttrs (
           name: _:
-          evalGuard name
+          (
+            sys:
+            builtins.deepSeq (profileContracts name sys.config) (
+              evalGuard name sys.config.system.build.toplevel
+            )
+          )
             (mkSystem [
               self.nixosModules.${name}
               {
@@ -109,10 +154,28 @@
                 );
                 system.autoUpgrade.enable = nixpkgs.lib.mkForce false;
               }
-            ]).config.system.build.toplevel
+            ])
         ) profiles
         // {
           consumer-image = evalGuard "image" (mkImage [ self.nixosModules.base ]);
+
+          # Value: protects=manifest.json lists exactly the flake's profile
+          #   names, so build scripts never target a profile the flake lacks;
+          #   fails_when=a profile is removed from or added to flake.nix
+          #   without the matching manifest.json edit (or the reverse);
+          #   why_new=the sync was a comment-only convention, nothing read
+          #   manifest.json at eval time; seam=none; no_claim=that each image
+          #   slug exists on the machine0 platform (names only)
+          manifest-sync =
+            let
+              manifestNames = builtins.sort builtins.lessThan (
+                map (p: p.profile) (builtins.fromJSON (builtins.readFile ./manifest.json)).profiles
+              );
+              profileNames = builtins.attrNames profiles;
+            in
+            builtins.seq (expect "manifest-sync" (manifestNames == profileNames)
+              "manifest.json profiles [${toString manifestNames}] != flake profiles [${toString profileNames}]"
+            ) (pkgs.runCommand "manifest-sync" { } ''echo ok > "$out"'');
         };
     };
 }

@@ -14,6 +14,8 @@ machine0 new my-vm --image nixos-26-05-loaded --size medium
 machine0 images new my-image --flake 'github:machine0-io/nix#loaded'
 ```
 
+Building from a fork? Every profile auto-upgrades nightly from `github:machine0-io/nix`. Point `system.autoUpgrade.flake` at your fork or disable it, otherwise the VM reverts to this repo's profile overnight.
+
 To build an image file yourself on a NixOS machine, run `./make-image.sh <profile>`. It prints the path of the resulting `.qcow2.gz`.
 
 ### Profiles

@@ -28,8 +28,6 @@
       mkImage = import ./lib/mkimage.nix { inherit mkSystem; };
 
       # Each profile is the list of modules layered to produce that system.
-      # Keep in sync with manifest.json (single source of truth for the
-      # (profile -> machine0 image name) mapping consumed by build scripts).
       profiles = {
         base = [ ./modules/profiles/base.nix ];
         loaded = [ ./modules/profiles/loaded.nix ];
@@ -158,24 +156,6 @@
         ) profiles
         // {
           consumer-image = evalGuard "image" (mkImage [ self.nixosModules.base ]);
-
-          # Value: protects=manifest.json lists exactly the flake's profile
-          #   names, so build scripts never target a profile the flake lacks;
-          #   fails_when=a profile is removed from or added to flake.nix
-          #   without the matching manifest.json edit (or the reverse);
-          #   why_new=the sync was a comment-only convention, nothing read
-          #   manifest.json at eval time; seam=none; no_claim=that each image
-          #   slug exists on the machine0 platform (names only)
-          manifest-sync =
-            let
-              manifestNames = builtins.sort builtins.lessThan (
-                map (p: p.profile) (builtins.fromJSON (builtins.readFile ./manifest.json)).profiles
-              );
-              profileNames = builtins.attrNames profiles;
-            in
-            builtins.seq (expect "manifest-sync" (manifestNames == profileNames)
-              "manifest.json profiles [${toString manifestNames}] != flake profiles [${toString profileNames}]"
-            ) (pkgs.runCommand "manifest-sync" { } ''echo ok > "$out"'');
         };
     };
 }

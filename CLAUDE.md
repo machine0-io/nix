@@ -6,7 +6,6 @@ NixOS images for machine0 VMs. Five profiles: base, loaded, openclaw, hermes, gp
 
 ```
 flake.nix                         # Defines profiles as module lists, exposes packages + nixosConfigurations
-manifest.json                     # Maps profile name → machine0 image slug (used by build scripts)
 lib/
   mksystem.nix                    # nixpkgs.lib.nixosSystem wrapper (injects inputs, stateVersion, overlays)
   mkimage.nix                     # Appends image.nix to produce .qcow2.gz
@@ -39,7 +38,7 @@ modules/
 ## Testing
 
 - Nix eval: `nix eval .#nixosConfigurations.<profile>.config.system.build.toplevel.drvPath --extra-experimental-features 'nix-command flakes'` for each of the 5 profiles. Full `nix flake check` exceeds 10 minutes — use the targeted evals instead. New files must be `git add`ed before flake eval sees them.
-- Contract checks: `nix eval .#checks.x86_64-linux.<name>.drvPath --extra-experimental-features 'nix-command flakes'` for each profile plus `manifest-sync` and `consumer-image`. Each one evaluates that profile through its exported module (MOTD overridden, auto-upgrade off) and asserts what it carries (clone-repos scope, `cl`/`clc` aliases, nightly auto-upgrade tracking this repo, manifest.json and flake profile names in sync). CI runs these on every PR; they add to the per-profile eval above, they do not replace it.
+- Contract checks: `nix eval .#checks.x86_64-linux.<name>.drvPath --extra-experimental-features 'nix-command flakes'` for each profile plus `consumer-image`. Each one evaluates that profile through its exported module (MOTD overridden, auto-upgrade off) and asserts what it carries (clone-repos scope, `cl`/`clc` aliases, nightly auto-upgrade tracking this repo). CI runs these on every PR; they add to the per-profile eval above, they do not replace it.
 
 ## Profile inheritance
 
@@ -84,7 +83,7 @@ machine0 get <name> --json
   ```bash
   machine0 new <name> --image <image-slug> --size large
   ```
-  Use `manifest.json` to map profile → image slug:
+  Profile → image slug:
   - base → `nixos-26-05`
   - loaded → `nixos-26-05-loaded`
   - openclaw → `nixos-26-05-openclaw`

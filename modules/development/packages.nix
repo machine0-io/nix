@@ -36,10 +36,10 @@ let
   # but this derivation is the thing that breaks, so check it here too.
   machine0-cli = pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
     pname = "machine0-cli";
-    version = "1.0.180";
+    version = "1.0.202";
     src = pkgs.fetchurl {
       url = "https://registry.npmjs.org/@machine0/cli/-/cli-${finalAttrs.version}.tgz";
-      hash = "sha256-zLB6zaXNM0EMlK0qUeUuCVZvFhRA3wfBcjEnm9GpluY=";
+      hash = "sha256-WxJSw7QPjv/yywUfnr35IqKlRxkZGCr9FUC1GdlCNBc=";
     };
     nativeBuildInputs = [ pkgs.makeWrapper ];
     dontBuild = true;

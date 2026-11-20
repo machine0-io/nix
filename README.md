@@ -24,4 +24,4 @@ To build an image file yourself on a NixOS machine, run `./make-image.sh <profil
 | `nixos-26-05-loaded` | `#loaded` | Base + Claude Code, Codex and the machine0 CLI; build tools and runtimes (Node, Bun, Python, Rust, Go); rootless Docker; zsh; ports 80/443 open. Clones the repos in `CLONE_REPOS_ON_INIT` into `~/Projects` at boot. |
 | `nixos-26-05-openclaw` | `#openclaw` | Loaded + [OpenClaw](https://github.com/openclaw/nix-openclaw) CLI and Playwright browsers. |
 | `nixos-26-05-hermes` | `#hermes` | Loaded + [Hermes Agent](https://github.com/NousResearch/hermes-agent) CLI and Playwright browsers. |
-| `nixos-26-05-nvidia` | `#gpu` | Base + NVIDIA datacenter driver (570.172.08) and GPU containers (`docker --gpus all`). GPU VMs only. |
+| `nixos-26-05-nvidia` | `#gpu` | Base + NVIDIA datacenter driver (580.159.03) and GPU containers (`docker --gpus all`). GPU VMs only. |

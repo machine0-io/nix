@@ -1,12 +1,16 @@
 # NVIDIA datacenter userland for machine0 GPU droplets. One module covers
 # every SKU machine0 sells — H100/H200 (Hopper), RTX 4000/6000 Ada and L40S
-# (Ada): the R570 datacenter driver's release notes list the H-Series,
+# (Ada): the R580 datacenter driver's release notes list the H-Series,
 # L-Series AND the RTX Ada workstation cards as supported products
-# (docs.nvidia.com/datacenter/tesla/tesla-release-notes-570-172-08).
+# (docs.nvidia.com/datacenter/tesla/tesla-release-notes-580-159-03).
 #
-# Driver is pinned to dc_570 (570.172.08) instead of following
+# Driver is pinned to dc_580 (580.159.03) instead of following
 # `nvidiaPackages.dc`, so a nixpkgs bump can't silently move every GPU
-# image to a new driver branch.
+# image to a new driver branch. The pin has to move with the kernel: the
+# previous pin, dc_570 (570.172.08), does not compile against the 6.18
+# kernel NixOS 26.05 ships (the DRM fb_create callback gained a parameter
+# in 6.17), which broke the gpu build after the 26.05 upgrade. The eval
+# checks cannot see that; only a build of the profile does.
 #
 # Boot ordering:
 #
@@ -52,7 +56,7 @@ in
 
   hardware.nvidia = {
     datacenter.enable = true;
-    package = config.boot.kernelPackages.nvidiaPackages.dc_570;
+    package = config.boot.kernelPackages.nvidiaPackages.dc_580;
     nvidiaPersistenced = true;
     # nixpkgs 26.05 dropped the default for `hardware.nvidia.open`, making it
     # mandatory. Pin it to the pre-26.05 default (closed kernel modules) so the

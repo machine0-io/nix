@@ -52,7 +52,7 @@ base ─┬→ loaded ─┬→ openclaw
 - **loaded**: base + development/packages.nix + development/services.nix + development/clone-repos.nix + home/. Zsh shell. Rootless Docker, npm, nginx, firewall 80/443. `machine0-clone-repos` oneshot — clones the repos listed in the machine0 profile's `CLONE_REPOS_ON_INIT` env var (comma-separated `owner/repo` slugs or git URLs, read from `~/.machine0/env.sh` after profile injection) into `~/Projects`. No variable → no-op. `cl`/`clc` zsh aliases launch claude with `CLAUDE_CODE_SANDBOXED=1` and `--dangerously-skip-permissions` (`clc` adds `--continue`).
 - **openclaw**: loaded + playwright-mcp + openclaw CLI from nix-openclaw flake input.
 - **hermes**: loaded + playwright-mcp + hermes CLI + nixosModule from hermes-agent flake input.
-- **gpu**: base + hardware/nvidia.nix — NVIDIA datacenter driver 570.172.08 (pinned), nvidia-persistenced, fabricmanager gated on NVSwitch presence, rootful Docker with `--gpus all` (CDI). Boots GPU droplets only (gpuOnly on the machine0 platform).
+- **gpu**: base + hardware/nvidia.nix — NVIDIA datacenter driver 580.159.03 (pinned), nvidia-persistenced, fabricmanager gated on NVSwitch presence, rootful Docker with `--gpus all` (CDI). Boots GPU droplets only (gpuOnly on the machine0 platform).
 
 ## Where to make changes
 

@@ -36,8 +36,9 @@
     environment = {
       # Never prompt for credentials — fail the install instead of hanging.
       GIT_TERMINAL_PROMPT = "0";
-      # An unattended unit reports nothing to skills.sh (install telemetry
-      # and the security-audit lookup both honour this).
+      # No install telemetry or security-audit lookup from an unattended
+      # unit. Sources the CLI serves from skills.sh itself (a few owners,
+      # e.g. vercel-labs) are still downloaded from there.
       DISABLE_TELEMETRY = "1";
       # Static progress lines: without this the CLI's spinner writes every
       # animation frame into the journal.
@@ -85,7 +86,9 @@
           continue
         fi
         echo "installing $source"
-        if skills add "$source" --global --agent claude-code --agent codex --yes < /dev/null; then
+        # --json makes the exit status cover every skill in the entry; without
+        # it the CLI exits 0 when an individual skill fails to install.
+        if skills add "$source" --global --agent claude-code --agent codex --yes --json < /dev/null; then
           printf '%s\n' "$source" > "$marker"
         else
           echo "FAILED to install $source"

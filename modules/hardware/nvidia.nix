@@ -16,13 +16,15 @@
 #
 #   systemd-modules-load  (nvidia.ko; softdep pulls nvidia-uvm after udev)
 #        |
-#        +- nvidia-persistenced                 keeps the GPU initialized
-#        |                                      on a headless box
+#        +- nvidia-persistenced -- ExecCondition: driver loaded?
+#        |      keeps the GPU initialized on a headless box
+#        |      no GPU (image build VM) -> skipped, not failed
 #        +- nvidia-fabricmanager -- ExecCondition: NVSwitch present?
 #        |      1x VM   -> skipped (exit 1: unit inactive, not failed)
 #        |      8x box  -> runs (NVLink fabric requires it)
 #        |
-#        +- nvidia-container-toolkit-cdi-generator
+#        +- nvidia-container-toolkit-cdi-generator -- ExecCondition: driver loaded?
+#               |  no GPU (image build VM) -> skipped, not failed
 #               |  writes the CDI spec into /var/run/cdi/
 #               v
 #           docker  (rootful; features.cdi=true so `--gpus all` resolves
@@ -45,6 +47,14 @@
 }:
 let
   toolkitTools = lib.getOutput "tools" config.hardware.nvidia-container-toolkit.package;
+
+  # Unit gate: succeeds iff nvidia.ko is (or can be) loaded. Same rules as
+  # the fabricmanager gate below — full-path modprobe (the unit environment
+  # carries no useful PATH), stderr kept so a real driver-load failure on a
+  # GPU droplet shows in the journal.
+  driverLoaded = pkgs.writeShellScript "nvidia-driver-loaded" ''
+    ${pkgs.kmod}/bin/modprobe nvidia || exit 1
+  '';
 in
 {
   # NVIDIA userland/kernel modules are unfree, and the datacenter (Tesla)
@@ -90,6 +100,24 @@ in
   # a boot-time `--gpus` container can never race the spec generation.
   hardware.nvidia-container-toolkit.enable = true;
   systemd.services.docker.after = [ "nvidia-container-toolkit-cdi-generator.service" ];
+
+  # Skip the driver-dependent units when the driver isn't loaded. The image
+  # is built by `nixos-rebuild switch` on a build VM with no GPU: there the
+  # CDI generator exits 1 ("failed to initialize NVML: Driver Not Loaded")
+  # and nvidia-persistenced crash-loops into start-limit-hit. Either one
+  # going failed makes switch-to-configuration exit 4, which aborts the
+  # image build. An ExecCondition exit of 1 marks the unit skipped instead
+  # (inactive, not failed; Restart= does not apply), and docker's Requires=
+  # on the generator is still satisfied. On a GPU droplet modprobe is a
+  # no-op and both units start at boot as before.
+  systemd.services.nvidia-container-toolkit-cdi-generator = {
+    after = [ "systemd-modules-load.service" ];
+    serviceConfig.ExecCondition = driverLoaded;
+  };
+  systemd.services.nvidia-persistenced = {
+    after = [ "systemd-modules-load.service" ];
+    serviceConfig.ExecCondition = driverLoaded;
+  };
 
   # Rootful docker — unlike loaded's rootless daemon — because it is the
   # reliable path for `--gpus all`. The nix user drives it sudo-free via

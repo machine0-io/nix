@@ -41,7 +41,24 @@ in
     description = "Whether the loaded machine0 profile (dev stack) is active.";
   };
 
+  options.machine0.image.gpu = mkOption {
+    type = types.bool;
+    default = false;
+    description = ''
+      Whether this image carries GPU userland and is meant for GPU sizes.
+      Published in /etc/machine0/image.json so the platform can read it from
+      a built system instead of being told by hand.
+    '';
+  };
+
   config = {
+    # Image facts the profile declares about itself. Written on every
+    # profile, so a reader can tell "not a GPU image" from "image predates
+    # this file".
+    environment.etc."machine0/image.json".text = builtins.toJSON {
+      inherit (config.machine0.image) gpu;
+    };
+
     # Fetch the instance metadata blob from the hypervisor.
     systemd.services.machine0-metadata = {
       path = [ pkgs.curl ];

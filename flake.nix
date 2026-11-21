@@ -104,6 +104,13 @@
           #   moved back to a dev-only module; why_new=no check reads Home
           #   Manager shell aliases; seam=none; no_claim=that claude accepts
           #   these flags or that the alias works in a live shell (eval only)
+          # Value: protects=the gpu profile, and only it, declares itself a
+          #   GPU image (machine0.image.gpu, published in
+          #   /etc/machine0/image.json); fails_when=the declaration is dropped
+          #   from hardware/nvidia.nix, set on a non-GPU profile, or the file
+          #   is removed or its `gpu` key renamed;
+          #   why_new=nothing else reads the marker; seam=none;
+          #   no_claim=that the machine0 platform reads the file or acts on it
           profileContracts =
             name: cfg:
             let
@@ -111,6 +118,9 @@
               isLoadedPlus = cfg.machine0.profile.loaded;
               aliases = cfg.home-manager.users.nix.programs.zsh.shellAliases;
               launcher = alias: nixpkgs.lib.hasInfix "CLAUDE_CODE_SANDBOXED=1 claude" (aliases.${alias} or "");
+              isGpu = name == "gpu";
+              # What the platform reads is the published file, not the option.
+              imageJson = builtins.fromJSON (cfg.environment.etc."machine0/image.json".text or "{}");
             in
             [
               (expect name (
@@ -122,6 +132,9 @@
               (expect name (nixpkgs.lib.hasPrefix "github:machine0-io/nix" cfg.system.autoUpgrade.flake)
                 "nightly auto-upgrade must track this repo on every profile"
               )
+              (expect name (
+                cfg.machine0.image.gpu == isGpu && (imageJson.gpu or null) == isGpu
+              ) "machine0.image.gpu must be true, and published in /etc/machine0/image.json, on gpu only")
             ];
         in
         builtins.mapAttrs (

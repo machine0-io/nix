@@ -104,6 +104,12 @@
           #   moved back to a dev-only module; why_new=no check reads Home
           #   Manager shell aliases; seam=none; no_claim=that claude accepts
           #   these flags or that the alias works in a live shell (eval only)
+          # Value: protects=the gpu profile, and only it, declares itself a
+          #   GPU image (machine0.image.gpu, published in
+          #   /etc/machine0/image.json); fails_when=the declaration is dropped
+          #   from hardware/nvidia.nix or set on a non-GPU profile;
+          #   why_new=nothing else reads the marker; seam=none;
+          #   no_claim=that the machine0 platform reads the file or acts on it
           profileContracts =
             name: cfg:
             let
@@ -122,6 +128,9 @@
               (expect name (nixpkgs.lib.hasPrefix "github:machine0-io/nix" cfg.system.autoUpgrade.flake)
                 "nightly auto-upgrade must track this repo on every profile"
               )
+              (expect name (
+                cfg.machine0.image.gpu == (name == "gpu")
+              ) "machine0.image.gpu must be set on the gpu profile and only there")
             ];
         in
         builtins.mapAttrs (

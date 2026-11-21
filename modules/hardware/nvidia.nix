@@ -36,9 +36,11 @@
 # it with an ExecCondition that runs after the driver module has settled —
 # a bare ConditionPathExistsGlob could race device creation.
 #
-# This image is gpuOnly on the machine0 platform: on non-GPU hardware the
-# explicit module load fails and the boot comes up degraded-but-SSHable.
-# That path is out of contract and deliberately not defended against.
+# Non-GPU hardware is a supported boot path, not just a tolerated one: the
+# machine0 image builder runs `nixos-rebuild switch` for this profile on a
+# CPU VM. There the explicit module load fails (systemd-modules-load
+# tolerates it), the driver-dependent units below are skipped, and the
+# system comes up `running` with docker available but no GPU.
 {
   config,
   pkgs,
@@ -63,6 +65,11 @@ in
   # working.
   nixpkgs.config.allowUnfree = true;
   nixpkgs.config.nvidia.acceptLicense = true;
+
+  # Declare the image as a GPU image (see machine0.image.gpu in
+  # ../machine0.nix): it carries the NVIDIA userland and is meant for GPU
+  # sizes.
+  machine0.image.gpu = true;
 
   hardware.nvidia = {
     datacenter.enable = true;
@@ -114,9 +121,17 @@ in
     after = [ "systemd-modules-load.service" ];
     serviceConfig.ExecCondition = driverLoaded;
   };
+
+  # nvidia-persistenced dlopens libnvidia-cfg.so.1. On nixpkgs 26.05 its
+  # RUNPATH is /run/opengl-driver/lib, which only exists with
+  # hardware.graphics enabled — not the case on this headless datacenter
+  # profile — so the daemon exits 1 and crash-loops on a real GPU (25.11
+  # linked the driver's store path directly). Point it at the pinned
+  # driver's libs instead of pulling in the graphics stack.
   systemd.services.nvidia-persistenced = {
     after = [ "systemd-modules-load.service" ];
     serviceConfig.ExecCondition = driverLoaded;
+    environment.LD_LIBRARY_PATH = lib.makeLibraryPath [ config.hardware.nvidia.package ];
   };
 
   # Rootful docker — unlike loaded's rootless daemon — because it is the

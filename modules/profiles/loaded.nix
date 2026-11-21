@@ -1,7 +1,7 @@
 # Loaded profile — base + dev stack. Build tools, language runtimes,
-# AI agents, rootless Docker, npm, clone-repos-on-init, and a Home
-# Manager-driven shell (zsh + starship + zoxide + eza + screen) for the
-# `nix` user.
+# AI agents, rootless Docker, npm, clone-repos-on-init,
+# install-skills-on-init, and a Home Manager-driven shell (zsh + starship +
+# zoxide + eza + screen) for the `nix` user.
 {
   config,
   pkgs,
@@ -14,6 +14,7 @@
     ../development/packages.nix
     ../development/services.nix
     ../development/clone-repos.nix
+    ../development/install-skills.nix
     ../home
   ];
 

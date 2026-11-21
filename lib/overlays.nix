@@ -18,7 +18,12 @@
       };
     in
     {
-      inherit (unstable) claude-code codex playwright-driver;
+      inherit (unstable)
+        claude-code
+        codex
+        playwright-driver
+        skills
+        ;
     };
 
   unstableText = ''
@@ -30,7 +35,7 @@
             sha256 = "${nixpkgsUnstable.narHash}";
           }) { inherit (prev.stdenv.hostPlatform) system; config.allowUnfree = true; };
         in {
-          inherit (unstable) claude-code codex playwright-driver;
+          inherit (unstable) claude-code codex playwright-driver skills;
         })
     ];
     nixpkgs.config.allowUnfree = true;

@@ -111,6 +111,29 @@
           #   is removed or its `gpu` key renamed;
           #   why_new=nothing else reads the marker; seam=none;
           #   no_claim=that the machine0 platform reads the file or acts on it
+          # Value: protects=machine0-install-skills unit exists on loaded,
+          #   openclaw, hermes, is absent on base and gpu, and installs for
+          #   both Claude Code and Codex; fails_when=install-skills.nix import
+          #   is dropped from loaded.nix or added to base.nix, or either
+          #   `--agent` flag is removed from the unit's script; why_new=no
+          #   check reads this unit; seam=none; no_claim=that the skills CLI
+          #   accepts these flags or that an install succeeds at boot (eval
+          #   only, nothing is built or run)
+          # Value: protects=machine0-install-skills starts only after
+          #   machine0-profile-inject, the unit that writes the env file it
+          #   reads; fails_when=the ordering is dropped, so on first boot the
+          #   unit can run before the file exists, log "nothing to do" and
+          #   exit 0 with no skills installed; why_new=the presence check
+          #   passes with or without the ordering; seam=none; no_claim=that
+          #   systemd honours it at boot or that the payload carries the
+          #   variable (eval only)
+          # Value: protects=the `skills` CLI is on the system path of
+          #   loaded-derived profiles, so the documented `skills update -g`
+          #   works in a user shell; fails_when=it is dropped from
+          #   environment.systemPackages while staying on the unit's own
+          #   path; why_new=the unit keeps evaluating and installing without
+          #   it; seam=none; no_claim=which nixpkgs the package comes from or
+          #   that the binary runs (eval only)
           profileContracts =
             name: cfg:
             let
@@ -121,8 +144,34 @@
               isGpu = name == "gpu";
               # What the platform reads is the published file, not the option.
               imageJson = builtins.fromJSON (cfg.environment.etc."machine0/image.json".text or "{}");
+              installSkills = cfg.systemd.services.machine0-install-skills or { };
+              installSkillsScript = installSkills.script or "";
+              # Either spelling of the ordering counts: `after` or unitConfig.After.
+              installSkillsUnitAfter = installSkills.unitConfig.After or [ ];
+              installSkillsAfter = (installSkills.after or [ ]) ++ installSkillsUnitAfter;
+              systemPackageNames = map nixpkgs.lib.getName cfg.environment.systemPackages;
+              hasSkillsCli = builtins.elem "skills" systemPackageNames;
             in
             [
+              (expect name
+                (
+                  (cfg.systemd.services ? machine0-install-skills) == isLoadedPlus
+                  && (
+                    !isLoadedPlus
+                    || (
+                      nixpkgs.lib.hasInfix "--agent claude-code" installSkillsScript
+                      && nixpkgs.lib.hasInfix "--agent codex" installSkillsScript
+                    )
+                  )
+                )
+                "machine0-install-skills must be present on loaded-derived profiles, targeting Claude Code and Codex, and absent elsewhere"
+              )
+              (expect name (
+                !isLoadedPlus || builtins.elem "machine0-profile-inject.service" installSkillsAfter
+              ) "machine0-install-skills must start after machine0-profile-inject")
+              (expect name (
+                hasSkillsCli == isLoadedPlus
+              ) "the skills CLI must be on the system path on loaded-derived profiles only")
               (expect name (
                 (cfg.systemd.services ? machine0-clone-repos) == isLoadedPlus
               ) "machine0-clone-repos must be present on loaded-derived profiles and absent elsewhere")

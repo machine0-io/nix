@@ -10,11 +10,11 @@ lib/
   mksystem.nix                    # nixpkgs.lib.nixosSystem wrapper (injects inputs, stateVersion, overlays)
   mkimage.nix                     # Appends image.nix to produce .qcow2.gz
   mkMotd.nix                      # ANSI-styled SSH banner builder
-  overlays.nix                    # Pins claude-code, codex, playwright-driver from nixpkgs-unstable
+  overlays.nix                    # Pins claude-code, codex, playwright-driver, skills from nixpkgs-unstable
 modules/
   profiles/
     base.nix                      # Minimal: boot, networking, ssh, fail2ban, users, system, motd
-    loaded.nix                    # base + dev stack (packages, services, clone-repos, home-manager/zsh)
+    loaded.nix                    # base + dev stack (packages, services, clone-repos, install-skills, home-manager/zsh)
     openclaw.nix                  # loaded + playwright-mcp + openclaw CLI
     hermes.nix                    # loaded + playwright-mcp + hermes CLI + nixosModule
     gpu.nix                       # base + hardware/nvidia.nix (GPU droplets only)
@@ -39,7 +39,7 @@ modules/
 ## Testing
 
 - Nix eval: `nix eval .#nixosConfigurations.<profile>.config.system.build.toplevel.drvPath --extra-experimental-features 'nix-command flakes'` for each of the 5 profiles. Full `nix flake check` exceeds 10 minutes — use the targeted evals instead. New files must be `git add`ed before flake eval sees them.
-- Contract checks: `nix eval .#checks.x86_64-linux.<name>.drvPath --extra-experimental-features 'nix-command flakes'` for each profile plus `consumer-image`. Each one evaluates that profile through its exported module (MOTD overridden, auto-upgrade off) and asserts what it carries (clone-repos scope, install-skills scope and its two target agents, `cl`/`clc` aliases, nightly auto-upgrade tracking this repo, `machine0.image.gpu` set on gpu only). CI runs these on every PR; they add to the per-profile eval above, they do not replace it.
+- Contract checks: `nix eval .#checks.x86_64-linux.<name>.drvPath --extra-experimental-features 'nix-command flakes'` for each profile plus `consumer-image`. Each one evaluates that profile through its exported module (MOTD overridden, auto-upgrade off) and asserts what it carries (clone-repos scope, install-skills scope, its two target agents and its ordering after `machine0-profile-inject`, the `skills` CLI on the system path of loaded-derived profiles only, `cl`/`clc` aliases, nightly auto-upgrade tracking this repo, `machine0.image.gpu` set on gpu only). CI runs these on every PR; they add to the per-profile eval above, they do not replace it.
 
 ## Profile inheritance
 
@@ -50,7 +50,7 @@ base ─┬→ loaded ─┬→ openclaw
 ```
 
 - **base**: core/* modules, basic CLI packages (vim, git, curl, htop, wget, tmux, jq). Bash shell.
-- **loaded**: base + development/packages.nix + development/services.nix + development/clone-repos.nix + development/install-skills.nix + home/. Zsh shell. Rootless Docker, npm, nginx, firewall 80/443. `machine0-clone-repos` oneshot — clones the repos listed in the machine0 profile's `CLONE_REPOS_ON_INIT` env var (comma-separated `owner/repo` slugs or git URLs, read from `~/.machine0/env.sh` after profile injection) into `~/Projects`. No variable → no-op. `machine0-install-skills` oneshot — installs the skill sources listed in `INSTALL_SKILLS_ON_INIT` (comma-separated, same env file) for both Claude Code and Codex through the `skills` CLI (`skills add <source> --global --agent claude-code --agent codex --yes`): skills land in `~/.agents/skills` (read by Codex) with symlinks in `~/.claude/skills`. Each entry installs once (marker in `~/.local/state/machine0/install-skills`); failed entries retry on the next boot; update by hand with `skills update -g`. No variable → no-op. Repos that need their own installer are not supported — `garrytan/gstack` yields only its `/gstack` router skill. `cl`/`clc` zsh aliases launch claude with `CLAUDE_CODE_SANDBOXED=1` and `--dangerously-skip-permissions` (`clc` adds `--continue`).
+- **loaded**: base + development/packages.nix + development/services.nix + development/clone-repos.nix + development/install-skills.nix + home/. Zsh shell. Rootless Docker, npm, nginx, firewall 80/443. `machine0-clone-repos` oneshot — clones the repos listed in the machine0 profile's `CLONE_REPOS_ON_INIT` env var (comma-separated `owner/repo` slugs or git URLs, read from `~/.machine0/env.sh` after profile injection) into `~/Projects`. No variable → no-op. `machine0-install-skills` oneshot — installs the skill sources listed in `INSTALL_SKILLS_ON_INIT` (comma-separated, same env file) for both Claude Code and Codex through the `skills` CLI (`skills add <source> --global --agent claude-code --agent codex --yes --json`): skills land in `~/.agents/skills` (read by Codex) with symlinks in `~/.claude/skills`. Each entry installs once (marker in `~/.local/state/machine0/install-skills`); `--json` makes one failed skill fail its whole entry, and failed entries retry on the next boot; update by hand with `skills update -g`. No variable → no-op. Repos that need their own installer are not supported — `garrytan/gstack` yields only its `/gstack` router skill. `cl`/`clc` zsh aliases launch claude with `CLAUDE_CODE_SANDBOXED=1` and `--dangerously-skip-permissions` (`clc` adds `--continue`).
 - **openclaw**: loaded + playwright-mcp + openclaw CLI from nix-openclaw flake input.
 - **hermes**: loaded + playwright-mcp + hermes CLI + nixosModule from hermes-agent flake input.
 - **gpu**: base + hardware/nvidia.nix — NVIDIA datacenter driver 580.159.03 (pinned), nvidia-persistenced, fabricmanager gated on NVSwitch presence, rootful Docker with `--gpus all` (CDI). Declares itself a GPU image (`machine0.image.gpu = true`, published in `/etc/machine0/image.json`). Meant for GPU droplets, but also boots cleanly on a CPU VM with the driver-dependent units skipped — that is how the machine0 image builder builds it.

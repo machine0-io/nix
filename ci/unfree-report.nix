@@ -59,4 +59,10 @@ let
     ];
   };
 in
+# The report is evaluated with --impure, and in impure mode nixpkgs reads
+# NIXPKGS_ALLOW_UNFREE: set to 1, it allows every unfree package without
+# asking the predicate, and the report comes out empty.
+assert lib.assertMsg (
+  builtins.getEnv "NIXPKGS_ALLOW_UNFREE" != "1"
+) "unfree-report: unset NIXPKGS_ALLOW_UNFREE, it hides every unfree package from this report";
 traced.config.system.build.toplevel.drvPath

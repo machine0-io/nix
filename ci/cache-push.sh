@@ -42,7 +42,10 @@ trap 'rm -rf "$WORK"' EXIT
 ATTR=".#nixosConfigurations.${PROFILE}.config.system.build.toplevel"
 DRV=$(nix eval --raw "${ATTR}.drvPath")
 
-REPORT_DRV=$(nix eval --impure --raw --expr \
+# NIXPKGS_ALLOW_UNFREE=1 makes nixpkgs allow every unfree package without
+# asking the predicate the report relies on, so the report would be empty.
+# The report also refuses to evaluate with it set.
+REPORT_DRV=$(env -u NIXPKGS_ALLOW_UNFREE nix eval --impure --raw --expr \
   "import ./ci/unfree-report.nix { flake = builtins.getFlake (toString ./.); profile = \"${PROFILE}\"; }" \
   2>"$WORK/report")
 

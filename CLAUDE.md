@@ -40,7 +40,7 @@ ci/
 
 ## Binary cache
 
-`.github/workflows/cache.yml` builds every profile on pull requests and on `main` and pushes the result to `machine0.cachix.org`, which every image trusts (`modules/core/nix.nix`). It needs the `CACHIX_AUTH_TOKEN` repository secret. The cache is public, so `ci/cache-push.sh` leaves out every unfree package nixpkgs does not mark redistributable (claude-code today) and everything that depends on one; redistributable unfree packages (the NVIDIA driver) are pushed. `DRY_RUN=1 ci/cache-push.sh <profile>` on a NixOS machine prints what would be pushed. Packages built by another flake's own nixpkgs (nix-openclaw, hermes-agent) are not licence-checked.
+`.github/workflows/cache.yml` builds every profile on pull requests and on `main`, and on `main` pushes the result to `machine0.cachix.org`, which every image trusts (`modules/core/nix.nix`). Pull requests only build: a branch must not be able to publish to that cache before review. The push job runs in the `binary-cache` GitHub environment, which holds the `CACHIX_AUTH_TOKEN` secret and must be restricted to the `main` branch (the secret must not exist as a repository secret). The cache is public, so `ci/cache-push.sh` leaves out every unfree package nixpkgs does not mark redistributable (claude-code today) and everything that depends on one; redistributable unfree packages (the NVIDIA driver) are pushed. `DRY_RUN=1 ci/cache-push.sh <profile>` on a NixOS machine prints what would be pushed. Packages built by another flake's own nixpkgs (nix-openclaw, hermes-agent) are not licence-checked.
 
 ## Testing
 

@@ -1,13 +1,17 @@
 name: Binary cache
 
-# Builds every profile and pushes the result to machine0.cachix.org, the
-# cache every machine0 image already trusts (modules/core/nix.nix), so image
-# builds and nightly upgrades download what would otherwise be compiled on
-# the VM.
+# Builds every profile and, on main, pushes the result to
+# machine0.cachix.org, the cache every machine0 image already trusts
+# (modules/core/nix.nix), so image builds and nightly upgrades download what
+# would otherwise be compiled on the VM.
 #
-# Runs on pull requests as well as on main: an image rebuild starts on the
-# push to main, so the cache has to be warm before the merge. A pull request
-# from a fork gets no secret, so it builds and pushes nothing.
+# Only main publishes. Every machine0 VM trusts this cache, so a branch must
+# not be able to put anything in it before review. The write token lives in
+# the `binary-cache` environment, which is restricted to the main branch: a
+# pull request that edits this file to ask for the environment is refused
+# by GitHub. Do not add the token as a repository secret.
+#
+# Pull requests still build every profile, read-only.
 #
 # Unfree packages are pushed only when nixpkgs marks their licence
 # redistributable; ci/cache-push.sh decides and explains what is left out.
@@ -28,6 +32,7 @@ concurrency:
 jobs:
   build:
     name: build ${{ matrix.profile }}
+    if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     strategy:
@@ -48,8 +53,42 @@ jobs:
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
             extra-substituters = https://cache.garnix.io
             extra-trusted-public-keys = cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g=
-      # Pull only: the action's own push would upload every path built,
-      # with no licence check. ci/cache-push.sh does the push.
+      # Pull only: the cache is public, so no token is needed to read it.
+      - uses: cachix/cachix-action@v17
+        with:
+          name: machine0
+          skipPush: true
+      - name: Build
+        run: nix build --no-link --print-build-logs ".#nixosConfigurations.${{ matrix.profile }}.config.system.build.toplevel"
+      - name: Show what a push would leave out
+        run: DRY_RUN=1 ci/cache-push.sh "${{ matrix.profile }}"
+
+  publish:
+    name: publish ${{ matrix.profile }}
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    environment: binary-cache
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [base, loaded, gpu, openclaw, hermes]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free disk space
+        # The openclaw and hermes closures unpack to more than 10 GB.
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+      - uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+            extra-substituters = https://cache.garnix.io
+            extra-trusted-public-keys = cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g=
+      # skipPush: the action's own push would upload every path built, with
+      # no licence check. ci/cache-push.sh does the push.
       - uses: cachix/cachix-action@v17
         with:
           name: machine0
@@ -58,5 +97,4 @@ jobs:
       - name: Build
         run: nix build --no-link --print-build-logs ".#nixosConfigurations.${{ matrix.profile }}.config.system.build.toplevel"
       - name: Push to the cache
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         run: ci/cache-push.sh "${{ matrix.profile }}"

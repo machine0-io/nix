@@ -7,7 +7,7 @@ name: Binary cache
 #
 # Only main publishes. Every machine0 VM trusts this cache, so a branch must
 # not be able to put anything in it before review. The write token lives in
-# the `binary-cache` environment, which is restricted to the main branch: a
+# the `CI` environment, which is restricted to the main branch: a
 # pull request that edits this file to ask for the environment is refused
 # by GitHub. Do not add the token as a repository secret.
 #
@@ -68,7 +68,7 @@ jobs:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    environment: binary-cache
+    environment: CI
     strategy:
       fail-fast: false
       matrix:

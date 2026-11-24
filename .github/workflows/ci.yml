@@ -32,7 +32,7 @@ jobs:
       - name: deadnix --fail
         run: nix run nixpkgs#deadnix -- --fail .
       - name: shellcheck
-        run: nix run nixpkgs#shellcheck -- *.sh
+        run: nix run nixpkgs#shellcheck -- *.sh ci/*.sh
       - name: consumer API eval
         run: |
           for c in base loaded openclaw hermes gpu consumer-image; do

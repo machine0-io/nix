@@ -12,9 +12,16 @@
   unstableModule =
     _final: prev:
     let
+      # Follow the system's unfree policy (the modules that use this
+      # overlay set allowUnfree = true) rather than hard-coding it, so
+      # ci/unfree-report.nix also sees the unfree packages taken from
+      # unstable.
       unstable = import nixpkgsUnstable {
         inherit (prev.stdenv.hostPlatform) system;
-        config.allowUnfree = true;
+        config = {
+          inherit (prev.config) allowUnfree;
+          allowUnfreePredicate = prev.config.allowUnfreePredicate or (_: false);
+        };
       };
     in
     {

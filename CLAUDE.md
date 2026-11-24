@@ -33,7 +33,14 @@ modules/
   machine0.nix                    # Metadata service, hostname, SSH key install (systemd oneshots), /etc/machine0/image.json
   motd.nix                        # machine0.motd.text option
   image.nix                       # qcow2 image builder (appended by mkimage.nix, not used at runtime)
+ci/
+  unfree-report.nix               # Lists the unfree packages a profile instantiates and whether each is redistributable
+  cache-push.sh                   # Pushes a built profile to machine0.cachix.org, minus non-redistributable unfree packages
 ```
+
+## Binary cache
+
+`.github/workflows/cache.yml` builds every profile on pull requests and on `main`, and on `main` pushes the result to `machine0.cachix.org`, which every image trusts (`modules/core/nix.nix`). Pull requests only build: a branch must not be able to publish to that cache before review. The push job runs in the `CI` GitHub environment, which holds the `CACHIX_AUTH_TOKEN` secret and must be restricted to the `main` branch (the secret must not exist as a repository secret). The cache is public, so `ci/cache-push.sh` leaves out every unfree package nixpkgs does not mark redistributable (claude-code today) and everything that depends on one; redistributable unfree packages (the NVIDIA driver) are pushed. `DRY_RUN=1 ci/cache-push.sh <profile>` on a NixOS machine prints what would be pushed. Packages built by another flake's own nixpkgs (nix-openclaw, hermes-agent) are not licence-checked.
 
 ## Testing
 
